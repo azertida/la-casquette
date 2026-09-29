@@ -227,6 +227,35 @@
     to { transform: translate(var(--dx), 110vh) rotate(var(--rot)); }
   }
 
+
+  /* ---------- Envies ---------- */
+  .envies-bloc {
+    margin-top: 28px; background: var(--papier); border: 2px solid var(--trait); border-radius: 8px;
+    padding: 14px;
+  }
+  .envies-bloc p { margin-bottom: 10px; }
+  .envies-bloc button { width: 100%; }
+  .idee {
+    background: var(--papier); border: 2px solid var(--trait); border-radius: 8px;
+    padding: 10px; margin-bottom: 10px;
+    display: grid; grid-template-columns: 1fr auto; gap: 8px; align-items: start;
+  }
+  .idee input { grid-column: 1; }
+  .idee .retirer {
+    grid-column: 2; grid-row: 1 / span 2; align-self: center;
+    background: none; color: var(--accent); font-size: 24px; padding: 4px 10px; line-height: 1;
+  }
+  #envAjouter { width: 100%; }
+  .liste-idees { list-style: none; }
+  .liste-idees li {
+    background: var(--papier); border: 2px solid var(--trait); border-left: 6px solid var(--accent);
+    border-radius: 8px; padding: 12px 14px; margin-bottom: 10px;
+  }
+  .liste-idees .txt { display: block; font-size: 19px; }
+  .liste-idees a { display: inline-block; margin-top: 4px; color: var(--fonce); font-weight: 600; }
+  .corps-liste { padding-bottom: 40px; }
+  .corps-liste .rangee { margin-top: 18px; }
+
   @media (prefers-reduced-motion: reduce) {
     .rabat, .rabat-bas, body, .bandeau { transition: none; }
     .chapeau-anim { animation: none; }
@@ -274,7 +303,7 @@
 
     <section>
       <h2>Exclusions</h2>
-      <p class="aide">Personne ne peut se tirer soi-même. Pour le reste, ouvre un prénom et coche à qui cette personne ne peut pas offrir. Une exclusion ne vaut que dans un sens.</p>
+      <p class="aide">Personne ne peut tirer au sort son propre nom. Pour le reste, ouvre un prénom et coche à qui cette personne ne peut pas offrir. Une exclusion ne vaut que dans un sens.</p>
       <div id="exclusions"></div>
     </section>
 
@@ -322,10 +351,66 @@
           <span class="nom-tire" id="nomTire"></span>
         </div>
         <div class="rabat-bas"></div>
-        <div class="rabat">Touche pour déplier</div>
+        <div class="rabat">Appuie pour déplier</div>
       </button>
       <div class="mot-orga" id="motOrga" hidden></div>
       <p class="discret-bas" id="finLien"></p>
+      <div class="envies-bloc">
+        <p>Aide la personne qui a tiré ton nom au sort&#8239;: écris tes envies de cadeaux et partage-les dans le groupe. Guette aussi celles de <strong id="nomTire2"></strong>.</p>
+        <button type="button" class="btn-second" id="lienEnvies">Écrire mes envies</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= Écrire ses envies ================= -->
+  <div id="vueEnvies" class="vue-lien" hidden>
+    <header class="bandeau">
+      <div class="bandeau-contenu">
+        <span class="bandeau-emoji" id="envEmoji" aria-hidden="true">🎁</span>
+        <div>
+          <h1>Mes envies</h1>
+          <p id="envSous"></p>
+        </div>
+      </div>
+    </header>
+    <section>
+      <p class="aide">Note quelques idées de cadeaux, puis partage ta liste dans le groupe. Tout le monde pourra la lire, mais la personne qui t’offre un cadeau reste secrète.</p>
+      <label class="champ" for="envNom">Ton prénom</label>
+      <input type="text" id="envNom" autocomplete="given-name">
+    </section>
+    <section>
+      <h2>Idées de cadeaux</h2>
+      <div id="envIdees"></div>
+      <button type="button" class="btn-second" id="envAjouter">+ Ajouter une idée</button>
+    </section>
+    <section>
+      <label class="champ" for="envNote">Bon à savoir (facultatif)</label>
+      <textarea id="envNote" placeholder="Tailles, couleurs préférées, ce que tu as déjà…"></textarea>
+    </section>
+    <section>
+      <button type="button" class="btn-principal" id="envPartager">Partager ma liste</button>
+      <div class="rangee"><button type="button" class="btn-second" id="envCopier">Copier le lien</button></div>
+      <div class="message-erreur" id="envErreur" hidden></div>
+      <p class="aide" style="margin-top:14px">Pour la modifier plus tard, rouvre ton lien de tirage et appuie sur « Écrire mes envies »&#8239;: ta liste t’attend. Partage ensuite le nouveau lien.</p>
+    </section>
+  </div>
+
+  <!-- ================= Lire les envies de quelqu'un ================= -->
+  <div id="vueListe" class="vue-lien" hidden>
+    <header class="bandeau">
+      <div class="bandeau-contenu">
+        <span class="bandeau-emoji" id="lstEmoji" aria-hidden="true">🎁</span>
+        <div>
+          <h1 id="lstTitre"></h1>
+          <p id="lstSous"></p>
+        </div>
+      </div>
+    </header>
+    <div class="corps-liste">
+      <ul class="liste-idees" id="lstIdees"></ul>
+      <div class="mot-orga" id="lstNote" hidden></div>
+      <p class="discret-bas" id="lstChut"></p>
+      <div class="rangee"><button type="button" class="btn-second" id="lstMesEnvies">Écrire mes propres envies</button></div>
     </div>
   </div>
 
@@ -344,6 +429,7 @@
 
   const NBSP = '\u202F';
   const CLE_STOCKAGE = 'lacasquette_config';
+  const CLE_ENVIES = 'lacasquette_envies';
   const CLE_BROUILLAGE = 'lutin-discret';
   const ANNEE = new Date().getFullYear();
   const CASQUETTE_SVG = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="20 140 460 270" width="245" height="144" aria-hidden="true"> <defs> <pattern id="tweed" width="20" height="20" patternUnits="userSpaceOnUse" patternTransform="rotate(12)"> <rect width="20" height="20" fill="#7E6D5A"/> <path d="M0 0 L10 7 L20 0 M0 10 L10 17 L20 10" stroke="#66584A" stroke-width="2.4" fill="none"/> <path d="M0 5 L10 12 L20 5" stroke="#948370" stroke-width="1.5" fill="none"/> </pattern> <pattern id="tweedFonce" width="16" height="16" patternUnits="userSpaceOnUse"> <rect width="16" height="16" fill="#5E5143"/> <path d="M0 0 L8 6 L16 0 M0 8 L8 14 L16 8" stroke="#4A3F34" stroke-width="2" fill="none"/> </pattern> <radialGradient id="doublure" cx="50%" cy="30%" r="70%"> <stop offset="0" stop-color="#6E4A2E"/> <stop offset="1" stop-color="#3B2A1D"/> </radialGradient> <clipPath id="dedans"><path d="M0 0 L512 0 L512 252 L428 252 A160 40 0 0 1 108 252 L0 252 Z"/></clipPath> </defs> <g transform="translate(256 268) scale(1.04) translate(-258 -300)"> <!-- ombre --> <ellipse cx="262" cy="398" rx="170" ry="18" fill="#2B2118" opacity=".13"/> <!-- calotte retournée --> <g transform="translate(0 600) scale(1 -1)"> <path d="M424 358 C452 342 458 270 416 246 C352 214 254 234 172 274 C130 294 102 316 110 336 C126 350 160 352 200 354 Z" fill="url(#tweed)" stroke="#3E342A" stroke-width="5" stroke-linejoin="round"/> <path d="M120 326 C176 298 262 266 356 250" fill="none" stroke="#3E342A" stroke-width="4" stroke-linecap="round" opacity=".6"/> <circle cx="140" cy="318" r="7" fill="#4A3F34"/> </g> <!-- visière : un croissant posé à plat contre le bord avant de l\'ouverture --> <path d="M150 225 C94 219 44 234 38 255 C44 276 94 290 150 279 A160 40 0 0 1 150 225 Z" fill="url(#tweedFonce)" stroke="#3E342A" stroke-width="5" stroke-linejoin="round"/> <path d="M140 234 C104 234 76 244 70 254" fill="none" stroke="#FFFFFF" stroke-width="4" stroke-linecap="round" opacity=".15"/> <!-- ouverture : l\'intérieur doublé --> <ellipse cx="268" cy="252" rx="160" ry="40" fill="url(#doublure)" stroke="#3E342A" stroke-width="5"/> <g clip-path="url(#dedans)" stroke="#9C7A45" stroke-width="4" stroke-linejoin="round"> <g transform="translate(318 244) rotate(16)"><rect x="-40" y="-26" width="80" height="52" rx="4" fill="#DDBB7E"/><line x1="0" y1="-26" x2="0" y2="26" stroke-dasharray="7 6" stroke-width="3"/></g> <g transform="translate(232 240) rotate(-14)"><rect x="-44" y="-28" width="88" height="56" rx="4" fill="#E7C98F"/><line x1="0" y1="-28" x2="0" y2="28" stroke-dasharray="7 6" stroke-width="3"/></g> <g transform="translate(284 262) rotate(4)"><rect x="-36" y="-23" width="72" height="46" rx="4" fill="#E7C98F"/><line x1="0" y1="-23" x2="0" y2="23" stroke-dasharray="6 5" stroke-width="3"/></g> <g transform="translate(372 250) rotate(34)"><rect x="-28" y="-18" width="56" height="36" rx="4" fill="#DDBB7E"/><line x1="0" y1="-18" x2="0" y2="18" stroke-dasharray="6 5" stroke-width="3"/></g> </g> <path d="M108 252 A160 40 0 0 0 428 252" fill="none" stroke="#3E342A" stroke-width="5"/> </g> </svg>';
@@ -357,7 +443,7 @@
     noel: {
       label: 'Noël', emoji: '🎄', theme: 'theme-noel',
       titre: 'Secret Santa ' + ANNEE,
-      sous: 'Un cadeau, un nom, un secret.',
+      sous: 'La casquette a parlé, le père Noël compte sur toi.',
       phrase: 'Tu offres un cadeau à',
       partage: n => '🎄 ' + n + ', le père Noël te confie une mission secrète' + NBSP + '! Ouvre ce lien pour découvrir à qui tu offres un cadeau' + NBSP + ':',
       fin: 'Garde le secret jusqu’à Noël' + NBSP + '!',
@@ -393,7 +479,7 @@
     autre: {
       label: 'Autre occasion', emoji: '🎉', theme: 'theme-autre',
       titre: 'Échange de cadeaux',
-      sous: 'Un cadeau, un nom, un secret.',
+      sous: 'La casquette a parlé.',
       phrase: 'Tu offres un cadeau à',
       partage: n => '🎁 ' + n + ', voici ton tirage, rien que pour toi. Ouvre ce lien pour découvrir à qui tu offres un cadeau' + NBSP + ':',
       fin: 'Garde le secret' + NBSP + '!',
@@ -433,6 +519,20 @@
 
   /* ---------------- Aiguillage ---------------- */
   const hash = location.hash.slice(1);
+  window.addEventListener('hashchange', () => location.reload());
+  if (hash.startsWith('l=')) {
+    let donnees = null;
+    try { donnees = decoder(hash.slice(2)); } catch (e) { donnees = null; }
+    if (donnees && donnees.n && Array.isArray(donnees.i)) afficherListe(donnees);
+    else document.getElementById('vueErreur').hidden = false;
+    return;
+  }
+  if (hash.startsWith('envies')) {
+    let ctx = {};
+    if (hash.startsWith('envies=')) { try { ctx = decoder(hash.slice(7)) || {}; } catch (e) { ctx = {}; } }
+    ouvrirEnvies(ctx);
+    return;
+  }
   if (hash.startsWith('t=')) {
     let donnees = null;
     try { donnees = decoder(hash.slice(2)); } catch (e) { donnees = null; }
@@ -454,6 +554,10 @@
     document.getElementById('bonjour').textContent = 'Bonjour ' + d.g + ',';
     document.getElementById('phrase').textContent = occ.phrase;
     document.getElementById('nomTire').textContent = d.r;
+    document.getElementById('nomTire2').textContent = d.r;
+    document.getElementById('lienEnvies').addEventListener('click', () => {
+      location.hash = 'envies=' + encoder({ g: d.g, e: d.e, t: d.t });
+    });
     document.getElementById('finLien').textContent = occ.fin + ' Ce lien reste valable, tu peux le rouvrir quand tu veux.';
     if (d.m) {
       const mot = document.getElementById('motOrga');
@@ -495,6 +599,165 @@
     }
     document.body.appendChild(zone);
     setTimeout(() => zone.remove(), 5500);
+  }
+
+
+  /* ================= Envies : écrire sa liste ================= */
+
+  function normaliserLien(brut) {
+    let u = (brut || '').trim();
+    if (!u) return '';
+    if (!/^https?:\/\//i.test(u)) u = 'https://' + u;
+    try {
+      const url = new URL(u);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') return null;
+      if (!url.hostname.includes('.')) return null;
+      return url.href;
+    } catch (e) { return null; }
+  }
+
+  function ouvrirEnvies(ctx) {
+    const occ = appliquerTheme(ctx.e);
+    document.getElementById('vueEnvies').hidden = false;
+    document.title = 'Mes envies';
+    document.getElementById('envEmoji').textContent = occ.emoji;
+    document.getElementById('envSous').textContent = ctx.t ? ctx.t : 'Pour aider la personne qui t’offre un cadeau.';
+
+    let brouillon = { n: '', i: [], o: '' };
+    try { const b = JSON.parse(localStorage.getItem(CLE_ENVIES)); if (b && Array.isArray(b.i)) brouillon = b; } catch (e) { /* rien */ }
+    if (!brouillon.n && ctx.g) brouillon.n = ctx.g;
+    while (brouillon.i.length < 3) brouillon.i.push(['', '']);
+
+    const champNom = document.getElementById('envNom');
+    const champNote = document.getElementById('envNote');
+    champNom.value = brouillon.n;
+    champNote.value = brouillon.o || '';
+    champNom.addEventListener('input', () => { brouillon.n = champNom.value; garder(); });
+    champNote.addEventListener('input', () => { brouillon.o = champNote.value; garder(); });
+
+    function garder() {
+      try { localStorage.setItem(CLE_ENVIES, JSON.stringify(brouillon)); } catch (e) { /* stockage indisponible */ }
+    }
+
+    function rendreIdees() {
+      const zone = document.getElementById('envIdees');
+      zone.innerHTML = '';
+      brouillon.i.forEach((idee, k) => {
+        const bloc = document.createElement('div');
+        bloc.className = 'idee';
+        const t = document.createElement('input');
+        t.type = 'text'; t.value = idee[0]; t.placeholder = 'Idée ' + (k + 1);
+        t.setAttribute('aria-label', 'Idée ' + (k + 1));
+        t.addEventListener('input', () => { idee[0] = t.value; garder(); });
+        const u = document.createElement('input');
+        u.type = 'text'; u.inputMode = 'url'; u.autocapitalize = 'off'; u.value = idee[1];
+        u.placeholder = 'Lien vers le produit (facultatif)';
+        u.setAttribute('aria-label', 'Lien pour l’idée ' + (k + 1));
+        u.addEventListener('input', () => { idee[1] = u.value; garder(); });
+        const x = document.createElement('button');
+        x.type = 'button'; x.className = 'retirer'; x.textContent = '×';
+        x.setAttribute('aria-label', 'Retirer l’idée ' + (k + 1));
+        x.addEventListener('click', () => {
+          brouillon.i.splice(k, 1);
+          if (!brouillon.i.length) brouillon.i.push(['', '']);
+          garder(); rendreIdees();
+        });
+        bloc.append(t, u, x);
+        zone.appendChild(bloc);
+      });
+    }
+    rendreIdees();
+
+    document.getElementById('envAjouter').addEventListener('click', () => {
+      brouillon.i.push(['', '']);
+      garder(); rendreIdees();
+      const champs = document.querySelectorAll('#envIdees .idee input[type="text"]:not([inputmode])');
+      if (champs.length) champs[champs.length - 1].focus();
+    });
+
+    function preparer() {
+      const erreur = document.getElementById('envErreur');
+      erreur.hidden = true;
+      const nom = brouillon.n.trim();
+      if (!nom) { erreur.textContent = 'Indique ton prénom pour qu’on sache à qui sont ces envies.'; erreur.hidden = false; return null; }
+      const idees = [];
+      for (let k = 0; k < brouillon.i.length; k++) {
+        const txt = (brouillon.i[k][0] || '').trim();
+        const lien = normaliserLien(brouillon.i[k][1]);
+        if (lien === null) { erreur.textContent = 'Le lien de l’idée ' + (k + 1) + ' ne ressemble pas à une adresse web.'; erreur.hidden = false; return null; }
+        if (!txt && !lien) continue;
+        idees.push(lien ? [txt || 'Voir ce lien', lien] : [txt]);
+      }
+      if (!idees.length) { erreur.textContent = 'Écris au moins une idée.'; erreur.hidden = false; return null; }
+      const d = { n: nom, i: idees };
+      if ((brouillon.o || '').trim()) d.o = brouillon.o.trim();
+      if (ctx.e) d.e = ctx.e;
+      if (ctx.t) d.t = ctx.t;
+      return {
+        url: location.origin + location.pathname + '#l=' + encoder(d),
+        texte: '🎁 Les envies de ' + nom + (ctx.t ? ' pour « ' + ctx.t + ' »' : '') + NBSP + ':'
+      };
+    }
+
+    document.getElementById('envPartager').addEventListener('click', async () => {
+      const l = preparer(); if (!l) return;
+      if (navigator.share) {
+        try { await navigator.share({ title: 'Mes envies', text: l.texte, url: l.url }); return; }
+        catch (e) { if (e && e.name === 'AbortError') return; }
+      }
+      copierTexte(l.texte + '\n' + l.url);
+    });
+    document.getElementById('envCopier').addEventListener('click', () => {
+      const l = preparer(); if (!l) return;
+      copierTexte(l.texte + '\n' + l.url);
+    });
+  }
+
+  async function copierTexte(texte) {
+    try { await navigator.clipboard.writeText(texte); petitMessage('Lien copié. Colle-le dans le groupe.'); }
+    catch (e) { window.prompt('Copie ce texte' + NBSP + ':', texte); }
+  }
+
+  function petitMessage(txt) {
+    let t = document.querySelector('.toast');
+    if (!t) { t = document.createElement('div'); t.className = 'toast'; t.setAttribute('role', 'status'); document.body.appendChild(t); }
+    t.textContent = txt;
+    setTimeout(() => t.remove(), 3000);
+  }
+
+  /* ================= Envies : lire la liste de quelqu'un ================= */
+  function afficherListe(d) {
+    const occ = appliquerTheme(d.e);
+    document.getElementById('vueListe').hidden = false;
+    document.title = 'Les envies de ' + d.n;
+    document.getElementById('lstEmoji').textContent = occ.emoji;
+    document.getElementById('lstTitre').textContent = 'Les envies de ' + d.n;
+    document.getElementById('lstSous').textContent = d.t || '';
+    const ul = document.getElementById('lstIdees');
+    d.i.forEach(idee => {
+      const li = document.createElement('li');
+      const t = document.createElement('span');
+      t.className = 'txt';
+      t.textContent = idee[0] || '';
+      li.appendChild(t);
+      const lien = idee[1] ? normaliserLien(idee[1]) : '';
+      if (lien) {
+        const a = document.createElement('a');
+        a.href = lien; a.target = '_blank'; a.rel = 'noopener noreferrer';
+        a.textContent = 'Voir sur ' + new URL(lien).hostname.replace(/^www\./, '');
+        li.appendChild(a);
+      }
+      ul.appendChild(li);
+    });
+    if (d.o) {
+      const note = document.getElementById('lstNote');
+      note.textContent = d.o;
+      note.hidden = false;
+    }
+    document.getElementById('lstChut').textContent = 'C’est toi qui offres à ' + d.n + NBSP + '? Garde le secret' + NBSP + '!';
+    document.getElementById('lstMesEnvies').addEventListener('click', () => {
+      location.hash = 'envies=' + encoder({ e: d.e, t: d.t });
+    });
   }
 
   /* ================= Vue organisation ================= */
@@ -584,9 +847,13 @@
       sauver(); invaliderTirage(); rendreOccasions();
     }
 
+    function messageTirage(nom) {
+      return OCCASIONS[config.occasion].partage(nom).replace(/\s*:\s*$/, '.') + ' Tu pourras aussi y partager tes envies de cadeaux' + NBSP + ':';
+    }
+
     function rendreApercu() {
       const exemple = config.participants[0] || 'Prénom';
-      let txt = OCCASIONS[config.occasion].partage(exemple) + '\n(le lien personnel)';
+      let txt = messageTirage(exemple) + '\n(le lien personnel)';
       el('apercu').textContent = txt;
     }
 
@@ -858,7 +1125,7 @@
     }
 
     function texteMessage(nom) {
-      return OCCASIONS[config.occasion].partage(nom);
+      return messageTirage(nom);
     }
 
     async function partager(nom) {
