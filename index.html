@@ -154,6 +154,22 @@
   .rangee { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 12px; }
   .rangee button { flex: 1; min-width: 180px; }
 
+  .fenetre {
+    position: fixed; inset: 0; z-index: 25;
+    background: rgba(43, 33, 24, .55);
+    display: flex; align-items: center; justify-content: center; padding: 18px;
+  }
+  .fenetre-boite {
+    background: var(--papier); border-radius: 12px; padding: 22px 18px 18px;
+    max-width: 420px; width: 100%;
+    border-top: 6px solid var(--accent);
+  }
+  .fenetre-boite h2 { margin-bottom: 8px; }
+  .fenetre-boite p { margin-bottom: 16px; }
+  .fenetre-boite button { width: 100%; margin-top: 8px; }
+  .fenetre-boite .btn-principal { background: var(--fonce); box-shadow: none; font-size: 19px; padding: 14px; }
+  .btn-danger { background: var(--papier); color: #B3261E; border-color: #B3261E; }
+  .btn-annuler { background: none; color: var(--gris); text-decoration: underline; font-weight: 500; }
   .toast {
     position: fixed; left: 50%; bottom: calc(20px + env(safe-area-inset-bottom));
     transform: translateX(-50%); background: var(--encre); color: #fff;
@@ -323,10 +339,11 @@
 
     <section>
       <h2>Sauvegarde</h2>
-      <p class="aide">L’occasion, les participants et les exclusions restent dans ce navigateur. Le tirage, lui, n’est jamais enregistré.</p>
+      <p class="aide">L’occasion, les participants et les exclusions restent dans ce navigateur. Le tirage, lui, n’est jamais enregistré. Sur téléphone, « Exporter la liste » te laisse choisir où ranger la copie&#8239;: Fichiers, iCloud Drive, Google Drive, e-mail…</p>
       <div class="rangee">
         <button type="button" class="btn-second" id="btnExporter">Exporter la liste</button>
         <button type="button" class="btn-second" id="btnImporter">Importer une liste</button>
+        <button type="button" class="btn-second" id="btnNouvelle">Nouvelle liste</button>
       </div>
       <input type="file" id="fichierImport" accept=".json,application/json" hidden>
     </section>
@@ -782,6 +799,7 @@
     });
     el('btnExporter').addEventListener('click', exporter);
     el('btnImporter').addEventListener('click', () => el('fichierImport').click());
+    el('btnNouvelle').addEventListener('click', proposerNouvelleListe);
     el('fichierImport').addEventListener('change', importer);
 
     window.addEventListener('beforeunload', e => {
@@ -1157,15 +1175,87 @@
     }
 
     /* ---------- Export / import ---------- */
-    function exporter() {
-      const blob = new Blob([JSON.stringify(config, null, 2)], { type: 'application/json' });
+    /* ---------- Nouvelle liste ---------- */
+    function proposerNouvelleListe() {
+      if (!config.participants.length && !config.mot.trim()) {
+        toast('La liste est déjà vide.');
+        return;
+      }
+      const voile = document.createElement('div');
+      voile.className = 'fenetre';
+      voile.setAttribute('role', 'dialog');
+      voile.setAttribute('aria-modal', 'true');
+      voile.innerHTML =
+        '<div class="fenetre-boite">' +
+          '<h2>Nouvelle liste</h2>' +
+          '<p>Les participants, les exclusions et le mot pour tout le monde seront effacés de ce navigateur. ' +
+          'Les liens déjà envoyés continueront de fonctionner.</p>' +
+          '<button type="button" class="btn-principal" data-choix="exporter">Garder une copie, puis vider</button>' +
+          '<button type="button" class="btn-danger" data-choix="vider">Vider sans copie</button>' +
+          '<button type="button" class="btn-annuler" data-choix="annuler">Annuler</button>' +
+        '</div>';
+      document.body.appendChild(voile);
+      voile.querySelector('[data-choix="exporter"]').focus();
+      voile.addEventListener('click', e => {
+        const choix = e.target.dataset ? e.target.dataset.choix : null;
+        if (e.target === voile || choix === 'annuler') { voile.remove(); return; }
+        if (!choix) return;
+        voile.remove();
+        if (choix === 'exporter') {
+          exporter().then(ok => {
+            if (ok) viderListe();
+            else toast('Copie annulée : rien n’a été effacé.');
+          });
+        } else {
+          viderListe();
+        }
+      });
+    }
+
+    function viderListe() {
+      config = { occasion: config.occasion, titre: OCCASIONS[config.occasion].titre, mot: '', participants: [], exclusions: {} };
+      el('titre').value = config.titre;
+      el('mot').value = '';
+      el('erreurTirage').hidden = true;
+      sauver(); invaliderTirage(); rendreOccasions(); rendre();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      toast('Liste vide, prête pour un nouveau groupe.');
+    }
+
+    function nomFichier() {
+      const titre = (config.titre.trim() || OCCASIONS[config.occasion].titre)
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 40);
+      const d = new Date();
+      const date = d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+      return 'la-casquette-' + (titre ? titre + '-' : '') + date + '.json';
+    }
+
+    // Renvoie true si la copie est partie (partage ou téléchargement), false si on a annulé.
+    async function exporter() {
+      const nom = nomFichier();
+      const texte = JSON.stringify(config, null, 2);
+      let fichier = null;
+      try { fichier = new File([texte], nom, { type: 'application/json' }); } catch (e) { fichier = null; }
+      // Sur téléphone : feuille de partage (Fichiers, iCloud Drive, Google Drive, e-mail…)
+      if (fichier && navigator.canShare && navigator.canShare({ files: [fichier] })) {
+        try {
+          await navigator.share({ files: [fichier], title: nom });
+          return true;
+        } catch (e) {
+          if (e && e.name === 'AbortError') return false;
+          // autre erreur : on se rabat sur le téléchargement
+        }
+      }
+      const blob = new Blob([texte], { type: 'application/json' });
       const a = document.createElement('a');
       a.href = URL.createObjectURL(blob);
-      a.download = 'la-casquette.json';
+      a.download = nom;
       document.body.appendChild(a);
       a.click();
       a.remove();
       setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+      return true;
     }
 
     function importer(e) {
