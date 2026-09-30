@@ -61,6 +61,13 @@
   }
   .bandeau-contenu { position: relative; display: flex; align-items: center; gap: 16px; }
   .bandeau-emoji { font-size: 56px; line-height: 1; flex-shrink: 0; }
+  .medaillon {
+    flex-shrink: 0; width: 84px; height: 84px; border-radius: 50%;
+    background: #FAF5EA; border: 3px solid var(--accent);
+    display: flex; align-items: center; justify-content: center;
+    box-shadow: 0 2px 0 rgba(0,0,0,.18);
+  }
+  .medaillon svg { width: 72px; height: auto; margin-top: 2px; }
   .bandeau h1 { font-size: 2.1em; line-height: 1.1; }
   .bandeau p { opacity: .92; margin-top: 4px; }
 
@@ -286,7 +293,7 @@
   <div id="vueOrga" hidden>
     <header class="bandeau">
       <div class="bandeau-contenu">
-        <span class="bandeau-emoji" id="orgaEmoji" aria-hidden="true">🎄</span>
+        <span class="medaillon" id="orgaMedaillon" aria-hidden="true"></span>
         <div>
           <h1>La Casquette</h1>
           <p>Le tirage au sort pour un échange de cadeaux. Chaque personne reçoit un lien qui ne lui montre que le nom qu’elle a tiré.</p>
@@ -784,6 +791,8 @@
     let envoyes = new Set(); // prénoms dont le lien a été partagé ou copié
 
     const el = id => document.getElementById(id);
+    el('orgaMedaillon').innerHTML = CASQUETTE_SVG;
+    el('orgaMedaillon').querySelector('svg').setAttribute('viewBox', '36 196 430 180');
 
     if (!config.titre) config.titre = OCCASIONS[config.occasion].titre;
     el('titre').value = config.titre;
@@ -850,7 +859,6 @@
         zone.appendChild(b);
       });
       const occ = appliquerTheme(config.occasion);
-      el('orgaEmoji').textContent = occ.emoji;
       rendreApercu();
     }
 
